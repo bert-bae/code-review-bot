@@ -6,8 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc --declaration",
-    "dev:server": "ts-node-dev -r dotenv/config ./src/server/local.ts",
-    "dev:chat": "ts-node-dev -r dotenv/config ./src/app",
+    "dev": "ts-node-dev -r dotenv/config ./src/local.ts",
     "db:init": "node ./init-db.js"
   },
   "author": "Elbert Bae",
@@ -27,6 +26,7 @@
     "class-validator": "^0.13.1",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
+    "dynamoose": "^2.8.1",
     "express": "^4.17.1",
     "loglevel": "^1.7.1",
     "uuid": "^8.3.2"

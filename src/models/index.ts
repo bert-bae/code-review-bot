@@ -1,13 +1,11 @@
-import { BaseDynamoDBModel } from "./base-dynamodb-model";
+import dynamoose from "dynamoose";
+import { DevelopersSchema, PullRequestSchema } from "./schemas";
 
-export const prModel = new BaseDynamoDBModel({
-  tableName: "PullRequest_Table",
-  primaryKey: "prOwnerId",
-  secondaryIndices: ["prId", "reviewerId"],
-});
-
-export const devModel = new BaseDynamoDBModel({
-  tableName: "Developer_Table",
-  primaryKey: "developerId",
-  secondaryIndices: [],
-});
+export const PullRequestModel = dynamoose.model(
+  "ReviewBot_PullRequests",
+  PullRequestSchema
+);
+export const DeveloperModel = dynamoose.model(
+  "ReviewBot_Developers",
+  DevelopersSchema
+);
