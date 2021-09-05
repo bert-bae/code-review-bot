@@ -1,7 +1,7 @@
 import { DeveloperEntity } from "../types";
 import { BaseCommand, CommandContext } from "./base-command";
 
-export type CreateDeveloperCmdInput = Omit<DeveloperEntity, "developerId">;
+export type CreateDeveloperCmdInput = DeveloperEntity;
 
 export class CreateDeveloperCmd extends BaseCommand {
   private logger: CommandContext["logger"];

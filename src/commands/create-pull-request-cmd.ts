@@ -1,7 +1,8 @@
+import { PullRequestEntity } from "../types";
 import { BaseCommand, CommandContext } from "./base-command";
 
 export type CreatePullRequestCmdInput = {
-  developerId: string;
+  prOwner: string;
   link: string;
 };
 
@@ -14,17 +15,15 @@ export class CreatePullRequestCmd extends BaseCommand {
     this.models = ctx.models;
   }
 
-  public async execute(input: CreatePullRequestCmdInput) {
+  public async execute(
+    input: CreatePullRequestCmdInput
+  ): Promise<PullRequestEntity> {
     this.logger.info(
       `[CreatePullRequestCmd] Executing cmd: ${JSON.stringify(input)}`
     );
-    const prRecord = await this.models.pullRequests.create({
-      prOwner: input.developerId,
+    return this.models.pullRequests.create({
+      prOwner: input.prOwner,
       link: input.link,
-    });
-    return {
-      prId: prRecord.prId,
-      prOwner: prRecord.prOwner,
-    };
+    }) as any;
   }
 }
