@@ -4,11 +4,16 @@ import {
   SlackEventMiddleware,
   SlackMessageTypeMiddleware,
 } from "botbuilder-adapter-slack";
-import { BaseBot, BotContext } from "./base-bot";
-import { CommandConstructor } from "../utils/command-constructor";
-import { CreatePullRequestCmd, ResolveDeveloperCmd } from "../commands";
-import { AccessRoles, DeveloperEntity, PullRequestEntity } from "../types";
-import { CreatePullRequestCmdInput } from "../commands/create-pull-request-cmd";
+import { BaseBot, BotContext } from "../base-bot";
+import { CommandConstructor } from "../../utils/command-constructor";
+import {
+  CreatePullRequestCmd,
+  GetDeveloperCmd,
+  GetPullRequestsByDeveloperCmd,
+  ResolveDeveloperCmd,
+} from "../../commands";
+import { AccessRoles, DeveloperEntity, PullRequestStatus } from "../../types";
+import { createPrBlocks } from "./slack-block-helpers";
 
 export class SlackBot extends BaseBot {
   private ctx: BotContext;
@@ -50,21 +55,32 @@ export class SlackBot extends BaseBot {
     this.botCommands
       .addCommand("create", "Create a new pull request")
       .addOption("create", "-l", "Link to pull request")
-      .addOption("create", "-d", "Description of pull request");
+      .addOption("create", "-d", "Description of pull request")
+      .addCommand("list", "List all pull requests that are currently active");
 
     this.botCommands.describeCommands();
     this.bot.on("slash_command", async (bot, message) => {
       const [root, ...options] = message.text.split(" ");
       const opts = options.join(" ").trim();
       this.botCommands.validateCommand(root, opts);
+      const optionValues = this.botCommands.extractOptionValues(opts);
 
       const developer = await this.resolveDeveloper(message);
       switch (root) {
         case "create":
-          await this.createPullRequest(developer, {
+          await this.createPullRequest(optionValues, developer, {
             message,
             bot,
           });
+          break;
+        case "list":
+          await this.listPullRequests(optionValues, developer, {
+            message,
+            bot,
+          });
+          break;
+        default:
+          await bot.reply(message, `${root} is not a valid command`);
       }
     });
   }
@@ -78,23 +94,50 @@ export class SlackBot extends BaseBot {
   }
 
   private async createPullRequest(
+    optInput: Record<string, any>,
     developer: DeveloperEntity,
     botCtx: {
       message: BotkitMessage;
       bot: BotWorker;
     }
   ) {
-    const [root, ...options] = botCtx.message.text.split(" ");
-    const opts = options.join(" ").trim();
-    const optionValues = this.botCommands.extractOptionValues(opts);
     const pr = await new CreatePullRequestCmd(this.ctx).execute({
-      link: optionValues["l"],
+      link: optInput["l"],
       prOwner: developer.developerId,
     });
-    console.log(pr);
-    await botCtx.bot.reply(
-      botCtx.message,
-      `PR created for ${developer.name} at link ${pr.link}. Current status: ${pr.status}`
+
+    await botCtx.bot.reply(botCtx.message, createPrBlocks(developer, pr));
+  }
+
+  private async listPullRequests(
+    optInput: Record<string, any>,
+    developer: DeveloperEntity,
+    botCtx: {
+      message: BotkitMessage;
+      bot: BotWorker;
+    }
+  ) {
+    const prs = await new GetPullRequestsByDeveloperCmd(this.ctx).execute({
+      developerId: developer.developerId,
+    });
+    await Promise.all(
+      prs.map(async (pr) => {
+        if (pr.status === PullRequestStatus.Closed) {
+          return;
+        }
+
+        const reviewer =
+          pr.reviewerId &&
+          (await new GetDeveloperCmd(this.ctx).execute({
+            developerId: pr.reviewerId,
+          }));
+        await botCtx.bot.reply(
+          botCtx.message,
+          `Pull request link: ${pr.link}. Status is currently ${
+            pr.status
+          }. Reviewer is currently ${reviewer ? reviewer.name : "unassigned"}.`
+        );
+      })
     );
   }
 }

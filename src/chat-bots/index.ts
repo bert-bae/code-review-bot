@@ -1,1 +1,1 @@
-export { SlackBot } from "./slack-bot";
+export { SlackBot } from "./slack";

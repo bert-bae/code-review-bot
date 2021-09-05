@@ -1,3 +1,4 @@
+import { PullRequestEntity } from "../types";
 import { BaseCommand, CommandContext } from "./base-command";
 
 export type GetPullRequestsByDeveloperCmdInput = {
@@ -13,14 +14,20 @@ export class GetPullRequestsByDeveloperCmd extends BaseCommand {
     this.models = ctx.models;
   }
 
-  public async execute(input: GetPullRequestsByDeveloperCmdInput) {
+  public async execute(
+    input: GetPullRequestsByDeveloperCmdInput
+  ): Promise<PullRequestEntity[]> {
     this.logger.info(
       `[GetPullRequestsByDeveloperCmd] Executing cmd: ${JSON.stringify(input)}`
     );
-    const prs = await this.models.pullRequests
-      .query("prOwner")
-      .eq(input.developerId)
-      .exec();
-    return prs;
+    try {
+      const prs = (await this.models.pullRequests
+        .query("prOwner")
+        .eq(input.developerId)
+        .exec()) as any;
+      return prs;
+    } catch (err) {
+      console.log(err);
+    }
   }
 }
