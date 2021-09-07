@@ -16,15 +16,23 @@ export const createPrBlocks = (
       type: "section",
       text: {
         type: "mrkdwn",
+        text: pullRequest.description,
+      },
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
         text: "Link to pull request",
       },
       accessory: {
         type: "button",
         text: {
           type: "plain_text",
-          text: "View",
+          text: "View pull request",
         },
-        value: `${pullRequest.link}`,
+        value: "ViewPrLink",
+        url: `${pullRequest.link}`,
         action_id: "button-action",
       },
     },

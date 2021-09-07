@@ -30,4 +30,5 @@ export type PullRequestEntity = {
   link: string;
   status: PullRequestStatus;
   reviewSurvey?: IReviewSurvey;
+  description: string;
 };

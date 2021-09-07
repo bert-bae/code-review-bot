@@ -103,6 +103,7 @@ export class SlackBot extends BaseBot {
   ) {
     const pr = await new CreatePullRequestCmd(this.ctx).execute({
       link: optInput["l"],
+      description: optInput["d"] || "",
       prOwner: developer.developerId,
     });
 

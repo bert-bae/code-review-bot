@@ -4,6 +4,7 @@ import { BaseCommand, CommandContext } from "./base-command";
 export type CreatePullRequestCmdInput = {
   prOwner: string;
   link: string;
+  description?: string;
 };
 
 export class CreatePullRequestCmd extends BaseCommand {

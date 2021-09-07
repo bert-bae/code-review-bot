@@ -50,6 +50,10 @@ export const PullRequestSchema = new dynamoose.Schema(
       default: "Open",
       required: true,
     },
+    description: {
+      type: String,
+      required: false,
+    },
     reviewSurvey: ReviewSchema,
   },
   { timestamps: true }
