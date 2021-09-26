@@ -1,4 +1,16 @@
-type CliCommand = {
+import { BotkitMessage, BotWorker } from "botkit";
+import { DeveloperEntity } from "../types";
+
+export type BotCommand = (
+  optInput: Record<string, any>,
+  developer: DeveloperEntity,
+  botCtx: {
+    message: BotkitMessage;
+    bot: BotWorker;
+  }
+) => Promise<any>;
+
+export type CliCommand = {
   description?: string;
   options: Record<
     string,
@@ -7,6 +19,7 @@ type CliCommand = {
       trigger?: string;
     }
   >;
+  command: BotCommand;
 };
 
 export class CommandConstructor {

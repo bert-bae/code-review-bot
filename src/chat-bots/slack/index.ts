@@ -40,7 +40,6 @@ export class SlackBot extends BaseBot {
     });
     slackAdapter.use(new SlackEventMiddleware());
     slackAdapter.use(new SlackMessageTypeMiddleware());
-
     this.bot = new Botkit({
       adapter: slackAdapter,
     });
@@ -59,6 +58,11 @@ export class SlackBot extends BaseBot {
       .addCommand("list", "List all pull requests that are currently active");
 
     this.botCommands.describeCommands();
+    this.bot.on("block_actions", async (bot, message) => {
+      console.log("wtf");
+      console.log(JSON.stringify(message, null, 2));
+    });
+
     this.bot.on("slash_command", async (bot, message) => {
       const [root, ...options] = message.text.split(" ");
       const opts = options.join(" ").trim();
@@ -106,7 +110,6 @@ export class SlackBot extends BaseBot {
       description: optInput["d"] || "",
       prOwner: developer.developerId,
     });
-
     await botCtx.bot.reply(botCtx.message, createPrBlocks(developer, pr));
   }
 

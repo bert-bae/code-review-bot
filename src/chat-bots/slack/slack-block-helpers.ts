@@ -9,14 +9,9 @@ export const createPrBlocks = (
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `Pull request created by ${creator.name}. Current status is ${pullRequest.status}`,
-      },
-    },
-    {
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: pullRequest.description,
+        text: `Pull request created by ${creator.name}. Current status is ${
+          pullRequest.status
+        }.${pullRequest.description ? ` ${pullRequest.description}.` : ""}`,
       },
     },
     {
@@ -33,7 +28,7 @@ export const createPrBlocks = (
         },
         value: "ViewPrLink",
         url: `${pullRequest.link}`,
-        action_id: "button-action",
+        action_id: "ViewPrLink",
       },
     },
     {
@@ -45,7 +40,7 @@ export const createPrBlocks = (
             type: "plain_text",
             text: "Pick-up PR",
           },
-          value: "AssignPrReviewer",
+          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
           action_id: "AssignPrReviewer",
         },
         {
@@ -54,7 +49,7 @@ export const createPrBlocks = (
             type: "plain_text",
             text: "Review PR",
           },
-          value: "ReviewPullRequest",
+          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
           action_id: "ReviewPullRequest",
         },
         {
@@ -63,7 +58,7 @@ export const createPrBlocks = (
             type: "plain_text",
             text: `Alert ${creator.name}`,
           },
-          value: "AlertPrCreator",
+          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
           action_id: "AlertPrCreator",
         },
         {
@@ -72,7 +67,7 @@ export const createPrBlocks = (
             type: "plain_text",
             text: "Mark as Complete",
           },
-          value: "MarkAsComplete",
+          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
           action_id: "MarkAsComplete",
         },
       ],
