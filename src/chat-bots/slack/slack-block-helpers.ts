@@ -1,5 +1,13 @@
 import { DeveloperEntity, PullRequestEntity } from "../../types";
 
+export enum BlockCommands {
+  ViewPrLink = "ViewPrLink",
+  AssignPrReviewer = "AssignPrReviewer",
+  ReviewPullRequest = "ReviewPullRequest",
+  AlertPrCreator = "AlertPrCreator",
+  MarkAsComplete = "MarkAsComplete",
+}
+
 export const createPrBlocks = (
   creator: DeveloperEntity,
   pullRequest: PullRequestEntity
@@ -26,9 +34,9 @@ export const createPrBlocks = (
           type: "plain_text",
           text: "View pull request",
         },
-        value: "ViewPrLink",
+        value: `${pullRequest.prOwner}::${pullRequest.prId}`,
         url: `${pullRequest.link}`,
-        action_id: "ViewPrLink",
+        action_id: BlockCommands.ViewPrLink,
       },
     },
     {
@@ -41,7 +49,7 @@ export const createPrBlocks = (
             text: "Pick-up PR",
           },
           value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: "AssignPrReviewer",
+          action_id: BlockCommands.AssignPrReviewer,
         },
         {
           type: "button",
@@ -50,7 +58,7 @@ export const createPrBlocks = (
             text: "Review PR",
           },
           value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: "ReviewPullRequest",
+          action_id: BlockCommands.ReviewPullRequest,
         },
         {
           type: "button",
@@ -59,7 +67,7 @@ export const createPrBlocks = (
             text: `Alert ${creator.name}`,
           },
           value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: "AlertPrCreator",
+          action_id: BlockCommands.AlertPrCreator,
         },
         {
           type: "button",
@@ -68,7 +76,7 @@ export const createPrBlocks = (
             text: "Mark as Complete",
           },
           value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: "MarkAsComplete",
+          action_id: BlockCommands.MarkAsComplete,
         },
       ],
     },

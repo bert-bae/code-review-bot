@@ -1,16 +1,4 @@
-import { BotkitMessage, BotWorker } from "botkit";
-import { DeveloperEntity } from "../types";
-
-export type BotCommand = (
-  optInput: Record<string, any>,
-  developer: DeveloperEntity,
-  botCtx: {
-    message: BotkitMessage;
-    bot: BotWorker;
-  }
-) => Promise<any>;
-
-export type CliCommand = {
+export type Command<T> = {
   description?: string;
   options: Record<
     string,
@@ -19,29 +7,30 @@ export type CliCommand = {
       trigger?: string;
     }
   >;
-  command: BotCommand;
+  command: T;
 };
 
-export class CommandConstructor {
-  private commands: Record<string, CliCommand> = {};
+export class CommandConstructor<T> {
+  private commands: Record<string, Command<T>> = {};
   constructor() {}
 
-  public addCommand(cmd, description) {
-    const stripped = cmd.replace(/\-/g, "");
+  public addCommand(input: { name: string; command: T; description: string }) {
+    const stripped = input.name.replace(/\-/g, "");
     this.commands[stripped] = {
-      description,
+      description: input.description,
       options: {},
+      command: input.command,
     };
     return this;
   }
 
-  public addOption(cmd, option, description) {
+  public addOption(name, option, description) {
     const stripped = option.replace(/\-/g, "");
-    if (!this.commands[cmd]) {
+    if (!this.commands[name]) {
       throw new Error("Not found");
     }
 
-    this.commands[cmd].options[stripped] = {
+    this.commands[name].options[stripped] = {
       description,
       trigger: `-${stripped}`,
     };
@@ -61,16 +50,18 @@ export class CommandConstructor {
     return this;
   }
 
-  public validateCommand(cmd: string, options: string) {
+  public validateCommand(cmd: string, options?: string) {
     const command = this.commands[cmd];
     if (!command) {
       throw new Error("Command not found");
     }
+    console.log(options);
     options &&
       options
         .split("-")
         .filter((x) => !!x)
         .forEach((pair) => {
+          console.log(pair);
           const [trigger] = pair.split(" ");
           if (!command.options[trigger]) {
             throw new Error(`Command ${cmd} option ${trigger} is not valid`);
@@ -80,14 +71,20 @@ export class CommandConstructor {
 
   public extractOptionValues(options: string) {
     const result = {};
-    options
-      .split("-")
-      .filter((x) => !!x)
-      .forEach((pair) => {
-        const [trigger, value] = pair.split(" ");
-        result[trigger] = value;
-      });
+    options &&
+      options
+        .split("-")
+        .filter((x) => !!x)
+        .forEach((pair) => {
+          const [trigger, value] = pair.split(" ");
+          result[trigger] = value;
+        });
 
     return result;
+  }
+
+  public getHandler(commandName: string, options?: string): T {
+    this.validateCommand(commandName, options);
+    return this.commands[commandName].command;
   }
 }

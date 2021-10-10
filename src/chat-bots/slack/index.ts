@@ -11,16 +11,30 @@ import {
   GetDeveloperCmd,
   GetPullRequestsByDeveloperCmd,
   ResolveDeveloperCmd,
+  UpdatePullRequestCmd,
 } from "../../commands";
 import { AccessRoles, DeveloperEntity, PullRequestStatus } from "../../types";
-import { createPrBlocks } from "./slack-block-helpers";
+import { BlockCommands, createPrBlocks } from "./slack-block-helpers";
+
+type SlackBotContext = {
+  message: BotkitMessage;
+  bot: BotWorker;
+};
+
+export type SlackCommandHandler = (
+  botCtx: SlackBotContext,
+  developer: DeveloperEntity,
+  optInput?: Record<string, any>
+) => Promise<any>;
 
 export class SlackBot extends BaseBot {
   private ctx: BotContext;
   private logger: BotContext["logger"];
   private models: BotContext["models"];
-  private botCommands: CommandConstructor;
+  private slashCommands: CommandConstructor<SlackCommandHandler>;
+  private blockCommands: CommandConstructor<SlackCommandHandler>;
   private bot: Botkit;
+  private actionValueSeparator: string = "::";
 
   constructor(ctx: BotContext) {
     super();
@@ -28,7 +42,6 @@ export class SlackBot extends BaseBot {
     this.logger = ctx.logger;
     this.models = ctx.models;
     this.initializeBot();
-    this.addListeners();
     this.addCommands();
   }
 
@@ -45,65 +58,97 @@ export class SlackBot extends BaseBot {
     });
   }
 
-  protected addListeners() {
-    this.logger.info("Not Implemented");
-  }
-
   protected addCommands() {
-    this.botCommands = new CommandConstructor();
-    this.botCommands
-      .addCommand("create", "Create a new pull request")
+    this.slashCommands = new CommandConstructor<SlackCommandHandler>()
+      .addCommand({
+        name: "create",
+        description: "Create a new pull request",
+        command: this.createPullRequest.bind(this),
+      })
       .addOption("create", "-l", "Link to pull request")
       .addOption("create", "-d", "Description of pull request")
-      .addCommand("list", "List all pull requests that are currently active");
+      .addCommand({
+        name: "list",
+        description: "List all pull requests that are currently active",
+        command: this.listPullRequests.bind(this),
+      });
+    this.slashCommands.describeCommands();
 
-    this.botCommands.describeCommands();
+    this.blockCommands =
+      new CommandConstructor<SlackCommandHandler>().addCommand({
+        name: BlockCommands.AssignPrReviewer,
+        description: "Assign pull request reviewer",
+        command: this.assignReviewer.bind(this),
+      });
+    this.blockCommands.describeCommands();
+
     this.bot.on("block_actions", async (bot, message) => {
-      console.log("wtf");
-      console.log(JSON.stringify(message, null, 2));
+      const developer = await this.resolveDeveloper(message.user);
+      const action = message.actions[0];
+      const commandName = action.action_id;
+
+      try {
+        const handler = this.blockCommands.getHandler(commandName);
+        this.logger.info(
+          `Executing command ${commandName} for developer ${developer.developerId}`
+        );
+        await handler(
+          {
+            bot,
+            message,
+          },
+          developer
+        );
+      } catch (err) {
+        this.logger.error(`Error occurred executing ${commandName}`, err);
+        await bot.reply(message, `${commandName} is not a valid command`);
+      }
     });
 
     this.bot.on("slash_command", async (bot, message) => {
-      const [root, ...options] = message.text.split(" ");
+      const [commandName, ...options] = message.text.split(" ");
       const opts = options.join(" ").trim();
-      this.botCommands.validateCommand(root, opts);
-      const optionValues = this.botCommands.extractOptionValues(opts);
+      const optionValues = this.slashCommands.extractOptionValues(opts);
 
-      const developer = await this.resolveDeveloper(message);
-      switch (root) {
-        case "create":
-          await this.createPullRequest(optionValues, developer, {
+      const developer = await this.resolveDeveloper(
+        message.user_id,
+        message.user_name
+      );
+      try {
+        const handler = this.slashCommands.getHandler(commandName);
+        this.logger.info(
+          `Executing command ${commandName} for developer ${developer.developerId}`
+        );
+        await handler(
+          {
             message,
             bot,
-          });
-          break;
-        case "list":
-          await this.listPullRequests(optionValues, developer, {
-            message,
-            bot,
-          });
-          break;
-        default:
-          await bot.reply(message, `${root} is not a valid command`);
+          },
+          developer,
+          optionValues || {}
+        );
+      } catch (err) {
+        this.logger.error(`Error occurred executing ${commandName}`, err);
+        await bot.reply(message, `${commandName} is not a valid command`);
       }
     });
   }
 
-  private async resolveDeveloper(message): Promise<DeveloperEntity> {
+  protected async resolveDeveloper(
+    id: string,
+    name?: string
+  ): Promise<DeveloperEntity> {
     return new ResolveDeveloperCmd(this.ctx).execute({
-      developerId: message.user_id,
-      name: message.user_name,
+      developerId: id,
+      name,
       accessRoles: AccessRoles.Developer,
     }) as any;
   }
 
-  private async createPullRequest(
-    optInput: Record<string, any>,
+  protected async createPullRequest<SlackBotContext>(
+    botCtx,
     developer: DeveloperEntity,
-    botCtx: {
-      message: BotkitMessage;
-      bot: BotWorker;
-    }
+    optInput: Record<string, any>
   ) {
     const pr = await new CreatePullRequestCmd(this.ctx).execute({
       link: optInput["l"],
@@ -113,13 +158,10 @@ export class SlackBot extends BaseBot {
     await botCtx.bot.reply(botCtx.message, createPrBlocks(developer, pr));
   }
 
-  private async listPullRequests(
-    optInput: Record<string, any>,
+  protected async listPullRequests<SlackBotContext>(
+    botCtx,
     developer: DeveloperEntity,
-    botCtx: {
-      message: BotkitMessage;
-      bot: BotWorker;
-    }
+    optInput: Record<string, any>
   ) {
     const prs = await new GetPullRequestsByDeveloperCmd(this.ctx).execute({
       developerId: developer.developerId,
@@ -143,5 +185,23 @@ export class SlackBot extends BaseBot {
         );
       })
     );
+  }
+
+  protected async assignReviewer<SlackBotContext>(
+    botCtx,
+    developer: DeveloperEntity,
+    optInput: Record<string, any>
+  ) {
+    const [prOwnerId, prId] = this.getActionValue(botCtx.message);
+    await new UpdatePullRequestCmd(this.ctx).execute({
+      developerId: prOwnerId,
+      prId,
+      reviewerId: developer.developerId,
+    });
+  }
+
+  private getActionValue(message: BotkitMessage): [string, string] {
+    const action = message.actions[0];
+    return action.value.split(this.actionValueSeparator);
   }
 }

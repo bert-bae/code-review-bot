@@ -1,4 +1,5 @@
 import { DeveloperModel, PullRequestModel } from "../models";
+import { DeveloperEntity } from "../types";
 
 export type BotContext = {
   logger: {
@@ -14,6 +15,28 @@ export type BotContext = {
 
 export abstract class BaseBot {
   protected abstract initializeBot();
-  protected abstract addListeners();
   protected abstract addCommands();
+
+  protected abstract resolveDeveloper(
+    id: string,
+    name?: string
+  ): Promise<DeveloperEntity>;
+
+  protected abstract createPullRequest<T>(
+    ctx: T,
+    developer: DeveloperEntity,
+    optInput?: Record<string, any>
+  ): Promise<void>;
+
+  protected abstract listPullRequests<T>(
+    botCtx: T,
+    developer: DeveloperEntity,
+    optInput?: Record<string, any>
+  ): Promise<void>;
+
+  protected abstract assignReviewer<T>(
+    botCtx,
+    developer: DeveloperEntity,
+    optInput: Record<string, any>
+  ): Promise<void>;
 }
