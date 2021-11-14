@@ -1,3 +1,4 @@
+import { BotkitMessage } from "botkit";
 import { DeveloperEntity, PullRequestEntity } from "../../types";
 
 export enum BlockCommands {
@@ -46,7 +47,7 @@ export const createPrBlocks = (
           type: "button",
           text: {
             type: "plain_text",
-            text: "Pick-up PR",
+            text: "Assign Reviewer",
           },
           value: `${pullRequest.prOwner}::${pullRequest.prId}`,
           action_id: BlockCommands.AssignPrReviewer,
@@ -55,7 +56,7 @@ export const createPrBlocks = (
           type: "button",
           text: {
             type: "plain_text",
-            text: "Review PR",
+            text: "Review",
           },
           value: `${pullRequest.prOwner}::${pullRequest.prId}`,
           action_id: BlockCommands.ReviewPullRequest,
@@ -82,3 +83,48 @@ export const createPrBlocks = (
     },
   ],
 });
+
+export const updatePrBlocks = (
+  blocks: Record<string, any>[],
+  actionId: BlockCommands,
+  updatedBlock: Record<string, any>
+) => {
+  const blockCopy = [...blocks];
+  const updateIndex = blockCopy.findIndex(
+    (block) => block.action_id === actionId
+  );
+  console.log(JSON.stringify(blocks, null, 2));
+  if (updateIndex === -1) {
+    throw new Error(`Block with action ${actionId} does not exist`);
+  }
+
+  blockCopy[updateIndex] = {
+    ...blockCopy[updateIndex],
+    ...updatedBlock,
+  };
+
+  return [...blockCopy];
+};
+
+export const updateAssignedReviewerBlock = (
+  blocks: Record<string, any>[],
+  developers: string
+) => {
+  const blockCopy = [...blocks];
+  const lastIndex = blockCopy.length - 1;
+  const blockToUpdate = blockCopy[lastIndex];
+  blockToUpdate.elements = blockToUpdate.elements.map((b) => {
+    if (b.action_id === BlockCommands.AssignPrReviewer) {
+      return {
+        ...b,
+        text: {
+          type: "plain_text",
+          text: "Assigned",
+        },
+      };
+    }
+    return b;
+  });
+
+  return blockCopy;
+};

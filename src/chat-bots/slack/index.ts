@@ -1,8 +1,9 @@
-import { Botkit, BotkitMessage, BotWorker } from "botkit";
+import { Botkit, BotkitMessage } from "botkit";
 import {
   SlackAdapter,
   SlackEventMiddleware,
   SlackMessageTypeMiddleware,
+  SlackBotWorker,
 } from "botbuilder-adapter-slack";
 import { BaseBot, BotContext } from "../base-bot";
 import { CommandConstructor } from "../../utils/command-constructor";
@@ -14,11 +15,16 @@ import {
   UpdatePullRequestCmd,
 } from "../../commands";
 import { AccessRoles, DeveloperEntity, PullRequestStatus } from "../../types";
-import { BlockCommands, createPrBlocks } from "./slack-block-helpers";
+import {
+  BlockCommands,
+  createPrBlocks,
+  updateAssignedReviewerBlock,
+  updatePrBlocks,
+} from "./slack-block-helpers";
 
 type SlackBotContext = {
   message: BotkitMessage;
-  bot: BotWorker;
+  bot: SlackBotWorker;
 };
 
 export type SlackCommandHandler = (
@@ -30,7 +36,6 @@ export type SlackCommandHandler = (
 export class SlackBot extends BaseBot {
   private ctx: BotContext;
   private logger: BotContext["logger"];
-  private models: BotContext["models"];
   private slashCommands: CommandConstructor<SlackCommandHandler>;
   private blockCommands: CommandConstructor<SlackCommandHandler>;
   private bot: Botkit;
@@ -40,7 +45,6 @@ export class SlackBot extends BaseBot {
     super();
     this.ctx = ctx;
     this.logger = ctx.logger;
-    this.models = ctx.models;
     this.initializeBot();
     this.addCommands();
   }
@@ -83,18 +87,18 @@ export class SlackBot extends BaseBot {
     this.blockCommands.describeCommands();
 
     this.bot.on("block_actions", async (bot, message) => {
-      const developer = await this.resolveDeveloper(message.user);
       const action = message.actions[0];
       const commandName = action.action_id;
 
       try {
+        const developer = await this.resolveDeveloper(message.user);
         const handler = this.blockCommands.getHandler(commandName);
         this.logger.info(
           `Executing command ${commandName} for developer ${developer.developerId}`
         );
         await handler(
           {
-            bot,
+            bot: bot as SlackBotWorker,
             message,
           },
           developer
@@ -108,13 +112,14 @@ export class SlackBot extends BaseBot {
     this.bot.on("slash_command", async (bot, message) => {
       const [commandName, ...options] = message.text.split(" ");
       const opts = options.join(" ").trim();
-      const optionValues = this.slashCommands.extractOptionValues(opts);
 
-      const developer = await this.resolveDeveloper(
-        message.user_id,
-        message.user_name
-      );
       try {
+        const optionValues = this.slashCommands.extractOptionValues(opts);
+        const developer = await this.resolveDeveloper(
+          message.user_id,
+          message.user_name
+        );
+
         const handler = this.slashCommands.getHandler(commandName);
         this.logger.info(
           `Executing command ${commandName} for developer ${developer.developerId}`
@@ -122,7 +127,7 @@ export class SlackBot extends BaseBot {
         await handler(
           {
             message,
-            bot,
+            bot: bot as SlackBotWorker,
           },
           developer,
           optionValues || {}
@@ -145,8 +150,8 @@ export class SlackBot extends BaseBot {
     }) as any;
   }
 
-  protected async createPullRequest<SlackBotContext>(
-    botCtx,
+  protected async createPullRequest(
+    botCtx: SlackBotContext,
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ) {
@@ -155,11 +160,15 @@ export class SlackBot extends BaseBot {
       description: optInput["d"] || "",
       prOwner: developer.developerId,
     });
-    await botCtx.bot.reply(botCtx.message, createPrBlocks(developer, pr));
+    const sent = await botCtx.bot.reply(
+      botCtx.message,
+      createPrBlocks(developer, pr)
+    );
+    console.log(JSON.stringify(sent, null, 2));
   }
 
-  protected async listPullRequests<SlackBotContext>(
-    botCtx,
+  protected async listPullRequests(
+    botCtx: SlackBotContext,
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ) {
@@ -181,14 +190,16 @@ export class SlackBot extends BaseBot {
           botCtx.message,
           `Pull request link: ${pr.link}. Status is currently ${
             pr.status
-          }. Reviewer is currently ${reviewer ? reviewer.name : "unassigned"}.`
+          }. Reviewer is currently ${
+            reviewer ? reviewer.name || reviewer.developerId : "unassigned"
+          }.`
         );
       })
     );
   }
 
-  protected async assignReviewer<SlackBotContext>(
-    botCtx,
+  protected async assignReviewer(
+    botCtx: SlackBotContext,
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ) {
@@ -197,6 +208,30 @@ export class SlackBot extends BaseBot {
       developerId: prOwnerId,
       prId,
       reviewerId: developer.developerId,
+    });
+
+    console.log(
+      JSON.stringify(
+        updateAssignedReviewerBlock(botCtx.message.message.blocks, "Assigned"),
+        null,
+        2
+      )
+    );
+    await this.updateMessageBlocks(
+      botCtx,
+      updateAssignedReviewerBlock(botCtx.message.message.blocks, "Assigned")
+    );
+  }
+
+  private async updateMessageBlocks(botCtx: SlackBotContext, blocks: any[]) {
+    await botCtx.bot.updateMessage({
+      ...botCtx.message.message,
+      id: botCtx.message.message.ts,
+      activityId: botCtx.message.message.ts,
+      conversation: {
+        id: botCtx.message.channel,
+      },
+      blocks,
     });
   }
 

@@ -22,20 +22,20 @@ export abstract class BaseBot {
     name?: string
   ): Promise<DeveloperEntity>;
 
-  protected abstract createPullRequest<T>(
-    ctx: T,
+  protected abstract createPullRequest(
+    ctx: any,
     developer: DeveloperEntity,
     optInput?: Record<string, any>
   ): Promise<void>;
 
-  protected abstract listPullRequests<T>(
-    botCtx: T,
+  protected abstract listPullRequests(
+    botCtx: any,
     developer: DeveloperEntity,
     optInput?: Record<string, any>
   ): Promise<void>;
 
-  protected abstract assignReviewer<T>(
-    botCtx,
+  protected abstract assignReviewer(
+    botCtx: any,
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ): Promise<void>;
