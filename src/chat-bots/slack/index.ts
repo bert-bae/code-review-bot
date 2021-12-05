@@ -1,3 +1,4 @@
+import axios from "axios";
 import { Botkit, BotkitMessage } from "botkit";
 import {
   SlackAdapter,
@@ -16,10 +17,11 @@ import {
 } from "../../commands";
 import { AccessRoles, DeveloperEntity, PullRequestStatus } from "../../types";
 import {
+  assignReviewerAction,
   BlockCommands,
   createPrBlocks,
-  updateAssignedReviewerBlock,
-  updatePrBlocks,
+  unassignReviewerAction,
+  updateBlockActions,
 } from "./slack-block-helpers";
 
 type SlackBotContext = {
@@ -78,11 +80,16 @@ export class SlackBot extends BaseBot {
       });
     this.slashCommands.describeCommands();
 
-    this.blockCommands =
-      new CommandConstructor<SlackCommandHandler>().addCommand({
+    this.blockCommands = new CommandConstructor<SlackCommandHandler>()
+      .addCommand({
         name: BlockCommands.AssignPrReviewer,
         description: "Assign pull request reviewer",
         command: this.assignReviewer.bind(this),
+      })
+      .addCommand({
+        name: BlockCommands.UnassignPrReviewer,
+        description: "Unassign pull request reviewer",
+        command: this.unassignReviewer.bind(this),
       });
     this.blockCommands.describeCommands();
 
@@ -164,7 +171,6 @@ export class SlackBot extends BaseBot {
       botCtx.message,
       createPrBlocks(developer, pr)
     );
-    console.log(JSON.stringify(sent, null, 2));
   }
 
   protected async listPullRequests(
@@ -181,11 +187,9 @@ export class SlackBot extends BaseBot {
           return;
         }
 
-        const reviewer =
-          pr.reviewerId &&
-          (await new GetDeveloperCmd(this.ctx).execute({
-            developerId: pr.reviewerId,
-          }));
+        const reviewer = await new GetDeveloperCmd(this.ctx).execute({
+          developerId: pr.reviewerId,
+        });
         await botCtx.bot.reply(
           botCtx.message,
           `Pull request link: ${pr.link}. Status is currently ${
@@ -203,34 +207,49 @@ export class SlackBot extends BaseBot {
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ) {
+    const { response_url } = botCtx.message;
     const [prOwnerId, prId] = this.getActionValue(botCtx.message);
+
     await new UpdatePullRequestCmd(this.ctx).execute({
       developerId: prOwnerId,
       prId,
       reviewerId: developer.developerId,
     });
-
-    console.log(
-      JSON.stringify(
-        updateAssignedReviewerBlock(botCtx.message.message.blocks, "Assigned"),
-        null,
-        2
-      )
-    );
     await this.updateMessageBlocks(
-      botCtx,
-      updateAssignedReviewerBlock(botCtx.message.message.blocks, "Assigned")
+      response_url,
+      updateBlockActions(
+        botCtx.message.message.blocks,
+        BlockCommands.AssignPrReviewer,
+        unassignReviewerAction({ prOwner: prOwnerId, prId }, developer)
+      )
     );
   }
 
-  private async updateMessageBlocks(botCtx: SlackBotContext, blocks: any[]) {
-    await botCtx.bot.updateMessage({
-      ...botCtx.message.message,
-      id: botCtx.message.message.ts,
-      activityId: botCtx.message.message.ts,
-      conversation: {
-        id: botCtx.message.channel,
-      },
+  protected async unassignReviewer(
+    botCtx: SlackBotContext,
+    developer: DeveloperEntity,
+    optInput: Record<string, any>
+  ) {
+    const { response_url } = botCtx.message;
+    const [prOwnerId, prId] = this.getActionValue(botCtx.message);
+
+    await new UpdatePullRequestCmd(this.ctx).execute({
+      developerId: prOwnerId,
+      prId,
+      reviewerId: "",
+    });
+    await this.updateMessageBlocks(
+      response_url,
+      updateBlockActions(
+        botCtx.message.message.blocks,
+        BlockCommands.UnassignPrReviewer,
+        assignReviewerAction({ prOwner: prOwnerId, prId })
+      )
+    );
+  }
+
+  private async updateMessageBlocks(responseUrl: string, blocks: any[]) {
+    await axios.post(responseUrl, {
       blocks,
     });
   }

@@ -1,13 +1,81 @@
-import { BotkitMessage } from "botkit";
 import { DeveloperEntity, PullRequestEntity } from "../../types";
 
 export enum BlockCommands {
   ViewPrLink = "ViewPrLink",
   AssignPrReviewer = "AssignPrReviewer",
+  UnassignPrReviewer = "UnassignPrReviewer",
   ReviewPullRequest = "ReviewPullRequest",
   AlertPrCreator = "AlertPrCreator",
   MarkAsComplete = "MarkAsComplete",
 }
+
+export type ActionRequestEntity = Pick<PullRequestEntity, "prId" | "prOwner">;
+
+export const assignReviewerAction = (pr: ActionRequestEntity) => {
+  return {
+    type: "button",
+    text: {
+      type: "plain_text",
+      text: "Assign Reviewer",
+    },
+    value: `${pr.prOwner}::${pr.prId}`,
+    action_id: BlockCommands.AssignPrReviewer,
+  };
+};
+
+export const reviewPrAction = (pr: ActionRequestEntity) => {
+  return {
+    type: "button",
+    text: {
+      type: "plain_text",
+      text: "Review",
+    },
+    value: `${pr.prOwner}::${pr.prId}`,
+    action_id: BlockCommands.ReviewPullRequest,
+  };
+};
+
+export const alertPrOwnerAction = (
+  pr: ActionRequestEntity,
+  creator: DeveloperEntity
+) => {
+  return {
+    type: "button",
+    text: {
+      type: "plain_text",
+      text: `Alert ${creator.name}`,
+    },
+    value: `${pr.prOwner}::${pr.prId}`,
+    action_id: BlockCommands.AlertPrCreator,
+  };
+};
+
+export const markAsCompleteAction = (pr: ActionRequestEntity) => {
+  return {
+    type: "button",
+    text: {
+      type: "plain_text",
+      text: "Mark as Complete",
+    },
+    value: `${pr.prOwner}::${pr.prId}`,
+    action_id: BlockCommands.MarkAsComplete,
+  };
+};
+
+export const unassignReviewerAction = (
+  pr: ActionRequestEntity,
+  developer: DeveloperEntity
+) => {
+  return {
+    type: "button",
+    text: {
+      type: "plain_text",
+      text: `Assigned to ${developer.name || developer.developerId}`,
+    },
+    value: `${pr.prOwner}::${pr.prId}`,
+    action_id: BlockCommands.UnassignPrReviewer,
+  };
+};
 
 export const createPrBlocks = (
   creator: DeveloperEntity,
@@ -43,84 +111,28 @@ export const createPrBlocks = (
     {
       type: "actions",
       elements: [
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "Assign Reviewer",
-          },
-          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: BlockCommands.AssignPrReviewer,
-        },
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "Review",
-          },
-          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: BlockCommands.ReviewPullRequest,
-        },
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: `Alert ${creator.name}`,
-          },
-          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: BlockCommands.AlertPrCreator,
-        },
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: "Mark as Complete",
-          },
-          value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-          action_id: BlockCommands.MarkAsComplete,
-        },
+        assignReviewerAction(pullRequest),
+        reviewPrAction(pullRequest),
+        // alertPrOwnerAction(pullRequest, creator),
+        // markAsCompleteAction(pullRequest),
       ],
     },
   ],
 });
 
-export const updatePrBlocks = (
+export const updateBlockActions = (
   blocks: Record<string, any>[],
-  actionId: BlockCommands,
-  updatedBlock: Record<string, any>
-) => {
-  const blockCopy = [...blocks];
-  const updateIndex = blockCopy.findIndex(
-    (block) => block.action_id === actionId
-  );
-  console.log(JSON.stringify(blocks, null, 2));
-  if (updateIndex === -1) {
-    throw new Error(`Block with action ${actionId} does not exist`);
-  }
-
-  blockCopy[updateIndex] = {
-    ...blockCopy[updateIndex],
-    ...updatedBlock,
-  };
-
-  return [...blockCopy];
-};
-
-export const updateAssignedReviewerBlock = (
-  blocks: Record<string, any>[],
-  developers: string
+  blockCommand: BlockCommands,
+  newBlockProperties: Record<string, any>
 ) => {
   const blockCopy = [...blocks];
   const lastIndex = blockCopy.length - 1;
   const blockToUpdate = blockCopy[lastIndex];
   blockToUpdate.elements = blockToUpdate.elements.map((b) => {
-    if (b.action_id === BlockCommands.AssignPrReviewer) {
+    if (b.action_id === blockCommand) {
       return {
         ...b,
-        text: {
-          type: "plain_text",
-          text: "Assigned",
-        },
+        ...newBlockProperties,
       };
     }
     return b;
