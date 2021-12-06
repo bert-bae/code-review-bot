@@ -1,4 +1,4 @@
-import { PullRequestEntity } from "../types";
+import { PullRequestEntity, PullRequestProperties } from "../types";
 import { BaseCommand, CommandContext } from "./base-command";
 
 export type UpdatePullRequestCmdInput = Partial<
@@ -10,11 +10,11 @@ export type UpdatePullRequestCmdInput = Partial<
 
 export class UpdatePullRequestCmd extends BaseCommand {
   private logger: CommandContext["logger"];
-  private models: CommandContext["models"];
+  private services: CommandContext["services"];
   constructor(ctx: CommandContext) {
     super();
     this.logger = ctx.logger;
-    this.models = ctx.models;
+    this.services = ctx.services;
   }
 
   public async execute(input: UpdatePullRequestCmdInput) {
@@ -22,7 +22,7 @@ export class UpdatePullRequestCmd extends BaseCommand {
       `[UpdatePullRequestCmd] Executing cmd: ${JSON.stringify(input)}`
     );
     const { developerId, prId, ...updateData } = input;
-    const updated = await this.models.pullRequests.update(
+    const updated = await this.services.pullRequests.updateOne(
       {
         prOwner: developerId,
         prId,

@@ -1,4 +1,8 @@
-import { DeveloperEntity, PullRequestEntity } from "../../types";
+import {
+  DeveloperEntity,
+  PullRequestEntity,
+  PullRequestKeys,
+} from "../../types";
 
 export enum BlockCommands {
   ViewPrLink = "ViewPrLink",
@@ -9,9 +13,7 @@ export enum BlockCommands {
   MarkAsComplete = "MarkAsComplete",
 }
 
-export type ActionRequestEntity = Pick<PullRequestEntity, "prId" | "prOwner">;
-
-export const assignReviewerAction = (pr: ActionRequestEntity) => {
+export const assignReviewerAction = (pr: PullRequestKeys) => {
   return {
     type: "button",
     text: {
@@ -23,7 +25,7 @@ export const assignReviewerAction = (pr: ActionRequestEntity) => {
   };
 };
 
-export const reviewPrAction = (pr: ActionRequestEntity) => {
+export const reviewPrAction = (pr: PullRequestKeys) => {
   return {
     type: "button",
     text: {
@@ -36,7 +38,7 @@ export const reviewPrAction = (pr: ActionRequestEntity) => {
 };
 
 export const alertPrOwnerAction = (
-  pr: ActionRequestEntity,
+  pr: PullRequestKeys,
   creator: DeveloperEntity
 ) => {
   return {
@@ -50,7 +52,7 @@ export const alertPrOwnerAction = (
   };
 };
 
-export const markAsCompleteAction = (pr: ActionRequestEntity) => {
+export const markAsCompleteAction = (pr: PullRequestKeys) => {
   return {
     type: "button",
     text: {
@@ -63,7 +65,7 @@ export const markAsCompleteAction = (pr: ActionRequestEntity) => {
 };
 
 export const unassignReviewerAction = (
-  pr: ActionRequestEntity,
+  pr: PullRequestKeys,
   developer: DeveloperEntity
 ) => {
   return {

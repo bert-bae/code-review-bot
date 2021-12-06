@@ -17,18 +17,28 @@ export interface IReviewSurvey {
   comments?: string;
 }
 
-export type DeveloperEntity = {
+export type DeveloperEntityKeys = {
   developerId: string;
+};
+
+export type DeveloperEntityProperties = {
   name?: string;
   accessRoles?: AccessRoles;
 };
 
-export type PullRequestEntity = {
+export type DeveloperEntity = DeveloperEntityKeys & DeveloperEntityProperties;
+
+export type PullRequestKeys = {
   prOwner: string;
   prId: string;
+};
+
+export type PullRequestProperties = {
   reviewerId?: string;
   link: string;
   status: PullRequestStatus;
   reviewSurvey?: IReviewSurvey;
   description: string;
 };
+
+export type PullRequestEntity = PullRequestKeys & PullRequestProperties;

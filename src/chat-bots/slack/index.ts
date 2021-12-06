@@ -6,9 +6,10 @@ import {
   SlackMessageTypeMiddleware,
   SlackBotWorker,
 } from "botbuilder-adapter-slack";
-import { BaseBot, BotContext } from "../base-bot";
+import { BaseBot } from "../base-bot";
 import { CommandConstructor } from "../../utils/command-constructor";
 import {
+  CommandContext,
   CreatePullRequestCmd,
   GetDeveloperCmd,
   GetPullRequestsByDeveloperCmd,
@@ -36,14 +37,14 @@ export type SlackCommandHandler = (
 ) => Promise<any>;
 
 export class SlackBot extends BaseBot {
-  private ctx: BotContext;
-  private logger: BotContext["logger"];
+  private ctx: CommandContext;
+  private logger: CommandContext["logger"];
   private slashCommands: CommandConstructor<SlackCommandHandler>;
   private blockCommands: CommandConstructor<SlackCommandHandler>;
   private bot: Botkit;
   private actionValueSeparator: string = "::";
 
-  constructor(ctx: BotContext) {
+  constructor(ctx: CommandContext) {
     super();
     this.ctx = ctx;
     this.logger = ctx.logger;
