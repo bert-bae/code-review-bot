@@ -9,11 +9,11 @@ export type CreatePullRequestCmdInput = {
 
 export class CreatePullRequestCmd extends BaseCommand {
   private logger: CommandContext["logger"];
-  private services: CommandContext["services"];
+  private models: CommandContext["models"];
   constructor(ctx: CommandContext) {
     super();
     this.logger = ctx.logger;
-    this.services = ctx.services;
+    this.models = ctx.models;
   }
 
   public async execute(
@@ -22,7 +22,7 @@ export class CreatePullRequestCmd extends BaseCommand {
     this.logger.info(
       `[CreatePullRequestCmd] Executing cmd: ${JSON.stringify(input)}`
     );
-    return this.services.pullRequests.create({
+    return this.models.pullRequests.create({
       prOwner: input.prOwner,
       link: input.link,
     }) as any;

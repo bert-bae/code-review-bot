@@ -16,7 +16,9 @@ export class GetDeveloperCmd extends BaseCommand {
     this.logger.info(
       `[GetDeveloperCmd] Executing cmd: ${JSON.stringify(input)}`
     );
-    const developer = await this.models.developers.get(input.developerId);
+    const developer = await this.models.developers.getOne({
+      developerId: input.developerId,
+    });
     return developer;
   }
 }

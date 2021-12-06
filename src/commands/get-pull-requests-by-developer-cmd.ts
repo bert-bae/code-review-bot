@@ -7,11 +7,11 @@ export type GetPullRequestsByDeveloperCmdInput = {
 
 export class GetPullRequestsByDeveloperCmd extends BaseCommand {
   private logger: CommandContext["logger"];
-  private services: CommandContext["services"];
+  private models: CommandContext["models"];
   constructor(ctx: CommandContext) {
     super();
     this.logger = ctx.logger;
-    this.services = ctx.services;
+    this.models = ctx.models;
   }
 
   public async execute(
@@ -21,7 +21,7 @@ export class GetPullRequestsByDeveloperCmd extends BaseCommand {
       `[GetPullRequestsByDeveloperCmd] Executing cmd: ${JSON.stringify(input)}`
     );
     try {
-      return this.services.pullRequests.queryByOwner(input.developerId);
+      return this.models.pullRequests.query("prOwner", input.developerId);
     } catch (err) {
       console.log(err);
     }

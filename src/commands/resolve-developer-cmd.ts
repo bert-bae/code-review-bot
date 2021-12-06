@@ -20,7 +20,9 @@ export class ResolveDeveloperCmd extends BaseCommand {
       throw new Error("Developer ID cannot be null or undefined");
     }
 
-    let developer = await this.models.developers.get(input.developerId);
+    let developer = await this.models.developers.getOne({
+      developerId: input.developerId,
+    });
 
     if (!developer) {
       this.logger.info(

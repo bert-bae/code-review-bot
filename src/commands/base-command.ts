@@ -1,5 +1,4 @@
-import { DeveloperModel, PullRequestModel } from "../models";
-import { PullRequestService } from "../services";
+import { DevelopersModel, PullRequestsModel } from "../models";
 
 export type CommandContext = {
   logger: {
@@ -8,11 +7,8 @@ export type CommandContext = {
     error: (message, data) => void;
   };
   models: {
-    developers: typeof DeveloperModel;
-    pullRequests: typeof PullRequestModel;
-  };
-  services: {
-    pullRequests: typeof PullRequestService;
+    developers: DevelopersModel;
+    pullRequests: PullRequestsModel;
   };
 };
 

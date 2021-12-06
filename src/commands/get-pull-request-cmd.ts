@@ -7,18 +7,18 @@ export type GetPullRequestCmdInput = {
 
 export class GetPullRequestCmd extends BaseCommand {
   private logger: CommandContext["logger"];
-  private services: CommandContext["services"];
+  private models: CommandContext["models"];
   constructor(ctx: CommandContext) {
     super();
     this.logger = ctx.logger;
-    this.services = ctx.services;
+    this.models = ctx.models;
   }
 
   public async execute(input: GetPullRequestCmdInput) {
     this.logger.info(
       `[GetPullRequestCmd] Executing cmd: ${JSON.stringify(input)}`
     );
-    const prRecord = await this.services.pullRequests.getOne({
+    const prRecord = await this.models.pullRequests.getOne({
       prOwner: input.developerId,
       prId: input.prId,
     });
