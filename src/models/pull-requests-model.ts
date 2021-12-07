@@ -32,7 +32,7 @@ export class PullRequestsModel extends DynamoDBModel<PullRequestEntity> {
     return this.model.query(queryKey).eq(value).exec() as any;
   }
 
-  public updateOne(
+  public async updateOne(
     prKeys: PullRequestKeys,
     update: Partial<PullRequestProperties>
   ) {

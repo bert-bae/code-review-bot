@@ -29,7 +29,7 @@ export class DevelopersModel extends DynamoDBModel<DeveloperEntity> {
     return this.model.query(queryKey).eq(value).exec() as any;
   }
 
-  public updateOne(
+  public async updateOne(
     keys: DeveloperEntityKeys,
     update: Partial<DeveloperEntityProperties>
   ) {
