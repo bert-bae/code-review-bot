@@ -25,17 +25,17 @@ export class PullRequestsModel extends DynamoDBModel<PullRequestEntity> {
   }
 
   public async getOne(keys: PullRequestKeys) {
-    return Model.get(keys) as any;
+    return this.model.get(keys) as any;
   }
 
   public async query(queryKey: string, value: string) {
-    return Model.query(queryKey).eq(value).exec() as any;
+    return this.model.query(queryKey).eq(value).exec() as any;
   }
 
   public updateOne(
     prKeys: PullRequestKeys,
     update: Partial<PullRequestProperties>
   ) {
-    return Model.updateOne(prKeys, update);
+    return this.model.update(prKeys, update) as any;
   }
 }

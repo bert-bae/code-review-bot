@@ -168,10 +168,7 @@ export class SlackBot extends BaseBot {
       description: optInput["d"] || "",
       prOwner: developer.developerId,
     });
-    const sent = await botCtx.bot.reply(
-      botCtx.message,
-      createPrBlocks(developer, pr)
-    );
+    await botCtx.bot.reply(botCtx.message, createPrBlocks(developer, pr));
   }
 
   protected async listPullRequests(

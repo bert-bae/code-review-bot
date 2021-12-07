@@ -22,17 +22,17 @@ export class DevelopersModel extends DynamoDBModel<DeveloperEntity> {
   }
 
   public async getOne(keys: DeveloperEntityKeys) {
-    return Model.get(keys) as any;
+    return this.model.get(keys) as any;
   }
 
   public async query(queryKey: string, value: string) {
-    return Model.query(queryKey).eq(value).exec() as any;
+    return this.model.query(queryKey).eq(value).exec() as any;
   }
 
   public updateOne(
     keys: DeveloperEntityKeys,
     update: Partial<DeveloperEntityProperties>
   ) {
-    return Model.updateOne(keys, update);
+    return this.model.update(keys, update) as any;
   }
 }
