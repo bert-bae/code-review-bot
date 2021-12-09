@@ -18,10 +18,7 @@ export class PullRequestsModel extends DynamoDBModel<PullRequestEntity> {
   }
 
   public async create(entity) {
-    return this.model.create({
-      prOwner: entity.prOwner,
-      link: entity.link,
-    }) as any;
+    return this.model.create(entity) as any;
   }
 
   public async getOne(keys: PullRequestKeys) {

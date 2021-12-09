@@ -22,9 +22,7 @@ export class CreatePullRequestCmd extends BaseCommand {
     this.logger.info(
       `[CreatePullRequestCmd] Executing cmd: ${JSON.stringify(input)}`
     );
-    return this.models.pullRequests.create({
-      prOwner: input.prOwner,
-      link: input.link,
-    }) as any;
+
+    return this.models.pullRequests.create(input) as any;
   }
 }
