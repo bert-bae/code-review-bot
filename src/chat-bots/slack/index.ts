@@ -24,6 +24,7 @@ import {
   unassignReviewerAction,
   updateBlockActions,
 } from "./slack-block-helpers";
+import { createReviewDialog } from "./slack-dialog-helpers";
 
 type SlackBotContext = {
   message: BotkitMessage;
@@ -91,6 +92,11 @@ export class SlackBot extends BaseBot {
         name: BlockCommands.UnassignPrReviewer,
         description: "Unassign pull request reviewer",
         command: this.unassignReviewer.bind(this),
+      })
+      .addCommand({
+        name: BlockCommands.ReviewPullRequest,
+        description: "Start the pull request review process",
+        command: this.openPullRequestReview.bind(this),
       });
     this.blockCommands.describeCommands();
 
@@ -113,6 +119,7 @@ export class SlackBot extends BaseBot {
         );
       } catch (err) {
         this.logger.error(`Error occurred executing ${commandName}`, err);
+        console.log(JSON.stringify(err.data, null, 2));
         await bot.reply(message, `${commandName} is not a valid command`);
       }
     });
@@ -244,6 +251,14 @@ export class SlackBot extends BaseBot {
         assignReviewerAction({ prOwner: prOwnerId, prId })
       )
     );
+  }
+
+  protected async openPullRequestReview(
+    botCtx: SlackBotContext,
+    developer: DeveloperEntity,
+    optInput: Record<string, any>
+  ) {
+    await botCtx.bot.replyWithDialog(botCtx.message, createReviewDialog);
   }
 
   private async updateMessageBlocks(responseUrl: string, blocks: any[]) {

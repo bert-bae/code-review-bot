@@ -32,4 +32,10 @@ export abstract class BaseBot {
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ): Promise<void>;
+
+  protected abstract openPullRequestReview(
+    botCtx: any,
+    developer: DeveloperEntity,
+    optInput: Record<string, any>
+  );
 }
