@@ -4,11 +4,12 @@ import {
   PullRequestKeys,
 } from "../../types";
 
-export enum BlockCommands {
+export enum SlackCommands {
   ViewPrLink = "ViewPrLink",
   AssignPrReviewer = "AssignPrReviewer",
   UnassignPrReviewer = "UnassignPrReviewer",
   ReviewPullRequest = "ReviewPullRequest",
+  SubmitPullRequestReview = "SubmitPullRequestReview",
   AlertPrCreator = "AlertPrCreator",
   MarkAsComplete = "MarkAsComplete",
 }
@@ -21,7 +22,7 @@ export const assignReviewerAction = (pr: PullRequestKeys) => {
       text: "Assign Reviewer",
     },
     value: `${pr.prOwner}::${pr.prId}`,
-    action_id: BlockCommands.AssignPrReviewer,
+    action_id: SlackCommands.AssignPrReviewer,
   };
 };
 
@@ -33,7 +34,7 @@ export const reviewPrAction = (pr: PullRequestKeys) => {
       text: "Review",
     },
     value: `${pr.prOwner}::${pr.prId}`,
-    action_id: BlockCommands.ReviewPullRequest,
+    action_id: SlackCommands.ReviewPullRequest,
   };
 };
 
@@ -48,7 +49,7 @@ export const alertPrOwnerAction = (
       text: `Alert ${creator.name}`,
     },
     value: `${pr.prOwner}::${pr.prId}`,
-    action_id: BlockCommands.AlertPrCreator,
+    action_id: SlackCommands.AlertPrCreator,
   };
 };
 
@@ -60,7 +61,7 @@ export const markAsCompleteAction = (pr: PullRequestKeys) => {
       text: "Mark as Complete",
     },
     value: `${pr.prOwner}::${pr.prId}`,
-    action_id: BlockCommands.MarkAsComplete,
+    action_id: SlackCommands.MarkAsComplete,
   };
 };
 
@@ -75,7 +76,7 @@ export const unassignReviewerAction = (
       text: `Assigned to ${developer.name || developer.developerId}`,
     },
     value: `${pr.prOwner}::${pr.prId}`,
-    action_id: BlockCommands.UnassignPrReviewer,
+    action_id: SlackCommands.UnassignPrReviewer,
   };
 };
 
@@ -107,7 +108,7 @@ export const createPrBlocks = (
         },
         value: `${pullRequest.prOwner}::${pullRequest.prId}`,
         url: `${pullRequest.link}`,
-        action_id: BlockCommands.ViewPrLink,
+        action_id: SlackCommands.ViewPrLink,
       },
     },
     {
@@ -124,7 +125,7 @@ export const createPrBlocks = (
 
 export const updateBlockActions = (
   blocks: Record<string, any>[],
-  blockCommand: BlockCommands,
+  blockCommand: SlackCommands,
   newBlockProperties: Record<string, any>
 ) => {
   const blockCopy = [...blocks];

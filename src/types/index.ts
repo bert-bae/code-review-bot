@@ -10,11 +10,11 @@ export enum PullRequestStatus {
 }
 
 export interface IReviewSurvey {
-  complexity?: number;
-  tests?: number;
-  design?: number;
-  functionality?: number;
   comments?: string;
+  functionality?: number;
+  design?: number;
+  readability?: number;
+  tests?: number;
 }
 
 export type DeveloperEntityKeys = {

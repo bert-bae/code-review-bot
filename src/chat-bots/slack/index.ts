@@ -19,12 +19,15 @@ import {
 import { AccessRoles, DeveloperEntity, PullRequestStatus } from "../../types";
 import {
   assignReviewerAction,
-  BlockCommands,
+  SlackCommands,
   createPrBlocks,
   unassignReviewerAction,
   updateBlockActions,
 } from "./slack-block-helpers";
-import { createReviewDialog } from "./slack-dialog-helpers";
+import {
+  createReviewDialog,
+  SlackDialogSubmitPullRequestState,
+} from "./slack-dialog-helpers";
 
 type SlackBotContext = {
   message: BotkitMessage;
@@ -40,8 +43,7 @@ export type SlackCommandHandler = (
 export class SlackBot extends BaseBot {
   private ctx: CommandContext;
   private logger: CommandContext["logger"];
-  private slashCommands: CommandConstructor<SlackCommandHandler>;
-  private blockCommands: CommandConstructor<SlackCommandHandler>;
+  private commands: CommandConstructor<SlackCommandHandler>;
   private bot: Botkit;
   private actionValueSeparator: string = "::";
 
@@ -67,7 +69,24 @@ export class SlackBot extends BaseBot {
   }
 
   protected addCommands() {
-    this.slashCommands = new CommandConstructor<SlackCommandHandler>()
+    this.commands = new CommandConstructor<SlackCommandHandler>()
+      // Block commands
+      .addCommand({
+        name: SlackCommands.AssignPrReviewer,
+        description: "Assign pull request reviewer",
+        command: this.assignReviewer.bind(this),
+      })
+      .addCommand({
+        name: SlackCommands.UnassignPrReviewer,
+        description: "Unassign pull request reviewer",
+        command: this.unassignReviewer.bind(this),
+      })
+      .addCommand({
+        name: SlackCommands.ReviewPullRequest,
+        description: "Start the pull request review process",
+        command: this.openPullRequestReview.bind(this),
+      })
+      // Slash commands
       .addCommand({
         name: "create",
         description: "Create a new pull request",
@@ -79,78 +98,52 @@ export class SlackBot extends BaseBot {
         name: "list",
         description: "List all pull requests that are currently active",
         command: this.listPullRequests.bind(this),
-      });
-    this.slashCommands.describeCommands();
-
-    this.blockCommands = new CommandConstructor<SlackCommandHandler>()
-      .addCommand({
-        name: BlockCommands.AssignPrReviewer,
-        description: "Assign pull request reviewer",
-        command: this.assignReviewer.bind(this),
       })
+      // Dialog commands
       .addCommand({
-        name: BlockCommands.UnassignPrReviewer,
-        description: "Unassign pull request reviewer",
-        command: this.unassignReviewer.bind(this),
-      })
-      .addCommand({
-        name: BlockCommands.ReviewPullRequest,
-        description: "Start the pull request review process",
-        command: this.openPullRequestReview.bind(this),
+        name: SlackCommands.SubmitPullRequestReview,
+        description: "Submit the review for the pull request",
+        command: this.submitPullRequestReview.bind(this),
       });
-    this.blockCommands.describeCommands();
-
-    this.bot.on("block_actions", async (bot, message) => {
-      const action = message.actions[0];
-      const commandName = action.action_id;
-
-      try {
-        const developer = await this.resolveDeveloper(message.user);
-        const handler = this.blockCommands.getHandler(commandName);
-        this.logger.info(
-          `Executing command ${commandName} for developer ${developer.developerId}`
-        );
-        await handler(
-          {
-            bot: bot as SlackBotWorker,
-            message,
-          },
-          developer
-        );
-      } catch (err) {
-        this.logger.error(`Error occurred executing ${commandName}`, err);
-        console.log(JSON.stringify(err.data, null, 2));
-        await bot.reply(message, `${commandName} is not a valid command`);
-      }
-    });
+    this.commands.describeCommands();
 
     this.bot.on("slash_command", async (bot, message) => {
       const [commandName, ...options] = message.text.split(" ");
       const opts = options.join(" ").trim();
 
-      try {
-        const optionValues = this.slashCommands.extractOptionValues(opts);
-        const developer = await this.resolveDeveloper(
-          message.user_id,
-          message.user_name
-        );
+      const optionValues = this.commands.extractOptionValues(opts);
+      const developer = await this.resolveDeveloper(
+        message.user_id,
+        message.user_name
+      );
 
-        const handler = this.slashCommands.getHandler(commandName);
-        this.logger.info(
-          `Executing command ${commandName} for developer ${developer.developerId}`
-        );
-        await handler(
-          {
-            message,
-            bot: bot as SlackBotWorker,
-          },
-          developer,
-          optionValues || {}
-        );
-      } catch (err) {
-        this.logger.error(`Error occurred executing ${commandName}`, err);
-        await bot.reply(message, `${commandName} is not a valid command`);
-      }
+      await this.executeCommand(
+        commandName,
+        { bot: bot as SlackBotWorker, message },
+        developer,
+        optionValues
+      );
+    });
+
+    this.bot.on("block_actions", async (bot, message) => {
+      const action = message.actions[0];
+      const commandName = action.action_id;
+      const developer = await this.resolveDeveloper(message.user);
+      await this.executeCommand(
+        commandName,
+        { bot: bot as SlackBotWorker, message },
+        developer
+      );
+    });
+
+    this.bot.on("dialog_submission", async (bot, message) => {
+      const developer = await this.resolveDeveloper(message.user);
+      const { command } = JSON.parse(message.state);
+      await this.executeCommand(
+        command,
+        { bot: bot as SlackBotWorker, message },
+        developer
+      );
     });
   }
 
@@ -224,7 +217,7 @@ export class SlackBot extends BaseBot {
       response_url,
       updateBlockActions(
         botCtx.message.message.blocks,
-        BlockCommands.AssignPrReviewer,
+        SlackCommands.AssignPrReviewer,
         unassignReviewerAction({ prOwner: prOwnerId, prId }, developer)
       )
     );
@@ -247,7 +240,7 @@ export class SlackBot extends BaseBot {
       response_url,
       updateBlockActions(
         botCtx.message.message.blocks,
-        BlockCommands.UnassignPrReviewer,
+        SlackCommands.UnassignPrReviewer,
         assignReviewerAction({ prOwner: prOwnerId, prId })
       )
     );
@@ -258,7 +251,48 @@ export class SlackBot extends BaseBot {
     developer: DeveloperEntity,
     optInput: Record<string, any>
   ) {
-    await botCtx.bot.replyWithDialog(botCtx.message, createReviewDialog);
+    const [prOwnerId, prId] = this.getActionValue(botCtx.message);
+    await botCtx.bot.replyWithDialog(botCtx.message, createReviewDialog(prId));
+  }
+
+  protected async submitPullRequestReview(
+    botCtx: SlackBotContext,
+    developer: DeveloperEntity,
+    optInput: Record<string, any>
+  ) {
+    const state = this.getDialogSubmitState<SlackDialogSubmitPullRequestState>(
+      botCtx.message
+    );
+    const submission = botCtx.message.submission;
+    console.log("----> State");
+    console.log(state);
+
+    console.log("----> Submission");
+    console.log(submission);
+    // await botCtx.bot.replyWithDialog(botCtx.message, createReviewDialog(prId))
+    // Save review and update the slack message to show Completed
+  }
+
+  private async executeCommand(
+    command: string,
+    botCtx: SlackBotContext,
+    developer: DeveloperEntity,
+    options?: Record<string, any>
+  ) {
+    try {
+      const handler = this.commands.getHandler(command);
+      this.logger.info(
+        `Executing command ${command} for developer ${developer.developerId}`
+      );
+
+      await handler(botCtx, developer, options || {});
+    } catch (err) {
+      this.logger.error(`Error occurred executing ${command}`, err);
+      await botCtx.bot.reply(
+        botCtx.message,
+        `${command} is not a valid command`
+      );
+    }
   }
 
   private async updateMessageBlocks(responseUrl: string, blocks: any[]) {
@@ -270,5 +304,10 @@ export class SlackBot extends BaseBot {
   private getActionValue(message: BotkitMessage): [string, string] {
     const action = message.actions[0];
     return action.value.split(this.actionValueSeparator);
+  }
+
+  private getDialogSubmitState<T>(message: BotkitMessage): T {
+    const state = JSON.parse(message.state);
+    return state as T;
   }
 }
