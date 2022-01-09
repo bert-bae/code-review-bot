@@ -9,12 +9,24 @@ export enum PullRequestStatus {
   Closed = "Closed",
 }
 
+export enum ReviewSurveyFields {
+  Comments = "Comments",
+  Complexity = "Complexity",
+  Design = "Design",
+  Functionality = "Functionality",
+  Naming = "Naming",
+  Readability = "Readability",
+  Tests = "Tests",
+}
+
 export interface IReviewSurvey {
-  comments?: string;
-  functionality?: number;
-  design?: number;
-  readability?: number;
-  tests?: number;
+  [ReviewSurveyFields.Comments]?: string;
+  [ReviewSurveyFields.Complexity]?: number;
+  [ReviewSurveyFields.Design]?: number;
+  [ReviewSurveyFields.Naming]?: number;
+  [ReviewSurveyFields.Functionality]?: number;
+  [ReviewSurveyFields.Readability]?: number;
+  [ReviewSurveyFields.Tests]?: number;
 }
 
 export type DeveloperEntityKeys = {

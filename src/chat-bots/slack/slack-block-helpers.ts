@@ -83,45 +83,72 @@ export const unassignReviewerAction = (
 export const createPrBlocks = (
   creator: DeveloperEntity,
   pullRequest: PullRequestEntity
-) => ({
-  blocks: [
-    {
-      type: "section",
+) => [
+  {
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: `Pull request created by ${creator.name}. Current status is ${
+        pullRequest.status
+      }.${pullRequest.description ? ` ${pullRequest.description}.` : ""}`,
+    },
+  },
+  {
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: "Link to pull request",
+    },
+    accessory: {
+      type: "button",
       text: {
-        type: "mrkdwn",
-        text: `Pull request created by ${creator.name}. Current status is ${
-          pullRequest.status
-        }.${pullRequest.description ? ` ${pullRequest.description}.` : ""}`,
+        type: "plain_text",
+        text: "View pull request",
       },
+      value: `${pullRequest.prOwner}::${pullRequest.prId}`,
+      url: `${pullRequest.link}`,
+      action_id: SlackCommands.ViewPrLink,
     },
-    {
-      type: "section",
+  },
+  {
+    type: "actions",
+    elements: [assignReviewerAction(pullRequest), reviewPrAction(pullRequest)],
+  },
+];
+
+export const reviewCompletedBlocks = (
+  reviewer: DeveloperEntity,
+  pullRequest: PullRequestEntity
+) => [
+  {
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: `Pull request review completed by ${
+        reviewer.name
+      }. Current status is ${pullRequest.status}.${
+        pullRequest.description ? ` ${pullRequest.description}.` : ""
+      }`,
+    },
+  },
+  {
+    type: "section",
+    text: {
+      type: "mrkdwn",
+      text: "Link to pull request",
+    },
+    accessory: {
+      type: "button",
       text: {
-        type: "mrkdwn",
-        text: "Link to pull request",
+        type: "plain_text",
+        text: "View pull request",
       },
-      accessory: {
-        type: "button",
-        text: {
-          type: "plain_text",
-          text: "View pull request",
-        },
-        value: `${pullRequest.prOwner}::${pullRequest.prId}`,
-        url: `${pullRequest.link}`,
-        action_id: SlackCommands.ViewPrLink,
-      },
+      value: `${pullRequest.prOwner}::${pullRequest.prId}`,
+      url: `${pullRequest.link}`,
+      action_id: SlackCommands.ViewPrLink,
     },
-    {
-      type: "actions",
-      elements: [
-        assignReviewerAction(pullRequest),
-        reviewPrAction(pullRequest),
-        // alertPrOwnerAction(pullRequest, creator),
-        // markAsCompleteAction(pullRequest),
-      ],
-    },
-  ],
-});
+  },
+];
 
 export const updateBlockActions = (
   blocks: Record<string, any>[],

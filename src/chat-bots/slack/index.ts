@@ -12,22 +12,30 @@ import {
   CommandContext,
   CreatePullRequestCmd,
   GetDeveloperCmd,
+  GetPullRequestCmd,
   GetPullRequestsByDeveloperCmd,
   ResolveDeveloperCmd,
   UpdatePullRequestCmd,
 } from "../../commands";
-import { AccessRoles, DeveloperEntity, PullRequestStatus } from "../../types";
+import {
+  AccessRoles,
+  DeveloperEntity,
+  PullRequestEntity,
+  PullRequestStatus,
+} from "../../types";
 import {
   assignReviewerAction,
   SlackCommands,
-  createPrBlocks,
   unassignReviewerAction,
   updateBlockActions,
+  createPrBlocks,
+  reviewCompletedBlocks,
 } from "./slack-block-helpers";
 import {
   createReviewDialog,
   SlackDialogSubmitPullRequestState,
 } from "./slack-dialog-helpers";
+import { sanitizeReviewSubmission } from "../../utils/data-sanitizer";
 
 type SlackBotContext = {
   message: BotkitMessage;
@@ -85,6 +93,12 @@ export class SlackBot extends BaseBot {
         name: SlackCommands.ReviewPullRequest,
         description: "Start the pull request review process",
         command: this.openPullRequestReview.bind(this),
+      })
+      .addCommand({
+        name: SlackCommands.ViewPrLink,
+        description: "Take actions when someone views the PR",
+        command: async () =>
+          console.log(`Command ${SlackCommands.ViewPrLink}: Not implemented`),
       })
       // Slash commands
       .addCommand({
@@ -158,6 +172,16 @@ export class SlackBot extends BaseBot {
     }) as any;
   }
 
+  protected async resolvePullRequest(
+    developerId,
+    prId: string
+  ): Promise<PullRequestEntity> {
+    return new GetPullRequestCmd(this.ctx).execute({
+      prId,
+      developerId,
+    }) as any;
+  }
+
   protected async createPullRequest(
     botCtx: SlackBotContext,
     developer: DeveloperEntity,
@@ -168,7 +192,9 @@ export class SlackBot extends BaseBot {
       description: optInput["d"] || "",
       prOwner: developer.developerId,
     });
-    await botCtx.bot.reply(botCtx.message, createPrBlocks(developer, pr));
+    await botCtx.bot.reply(botCtx.message, {
+      blocks: createPrBlocks(developer, pr),
+    });
   }
 
   protected async listPullRequests(
@@ -252,7 +278,10 @@ export class SlackBot extends BaseBot {
     optInput: Record<string, any>
   ) {
     const [prOwnerId, prId] = this.getActionValue(botCtx.message);
-    await botCtx.bot.replyWithDialog(botCtx.message, createReviewDialog(prId));
+    await botCtx.bot.replyWithDialog(
+      botCtx.message,
+      createReviewDialog(prOwnerId, prId)
+    );
   }
 
   protected async submitPullRequestReview(
@@ -263,14 +292,19 @@ export class SlackBot extends BaseBot {
     const state = this.getDialogSubmitState<SlackDialogSubmitPullRequestState>(
       botCtx.message
     );
-    const submission = botCtx.message.submission;
-    console.log("----> State");
-    console.log(state);
-
-    console.log("----> Submission");
-    console.log(submission);
-    // await botCtx.bot.replyWithDialog(botCtx.message, createReviewDialog(prId))
-    // Save review and update the slack message to show Completed
+    const reviewSubmission = sanitizeReviewSubmission(
+      botCtx.message.submission
+    );
+    const pullRequest = await new UpdatePullRequestCmd(this.ctx).execute({
+      developerId: state.prOwner,
+      prId: state.prId,
+      reviewSurvey: reviewSubmission,
+      status: PullRequestStatus.Closed,
+    });
+    await this.updateMessageBlocks(
+      botCtx.message.response_url,
+      reviewCompletedBlocks(developer, pullRequest)
+    );
   }
 
   private async executeCommand(

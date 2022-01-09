@@ -1,4 +1,4 @@
-import { DeveloperEntity } from "../types";
+import { DeveloperEntity, PullRequestEntity } from "../types";
 
 export abstract class BaseBot {
   protected abstract initializeBot();
@@ -8,6 +8,11 @@ export abstract class BaseBot {
     id: string,
     name?: string
   ): Promise<DeveloperEntity>;
+
+  protected abstract resolvePullRequest(
+    developerId: string,
+    prId: string
+  ): Promise<PullRequestEntity>;
 
   protected abstract createPullRequest(
     ctx: any,
